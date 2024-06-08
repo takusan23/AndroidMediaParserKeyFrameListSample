@@ -9,9 +9,10 @@ import kotlinx.coroutines.withContext
 import java.io.InputStream
 
 /** MediaParser を使ってコンテナフォーマットを解析する */
-object MediaContainerAnalyzer {
+object MediaParserKeyFrameDetector {
 
-    suspend fun analyze(onCreateInputStream: () -> InputStream): List<Long> = withContext(Dispatchers.IO) {
+    /** 解析して、キーフレームの位置を検出する */
+    suspend fun detect(onCreateInputStream: () -> InputStream): List<Long> = withContext(Dispatchers.IO) {
 
         // MediaParser を作る
         var seekMap: MediaParser.SeekMap? = null
@@ -64,8 +65,8 @@ object MediaContainerAnalyzer {
         // 流石にないはず
         seekMap ?: return@withContext emptyList()
 
-        // SeekMap 取れたら、1 秒ごとにシークできる位置はどこかを問いただす
-        return@withContext (0 until seekMap!!.durationMicros step 1_000_000) // マイクロ秒注意
+        // SeekMap 取れたら、1 ミリ秒ごとにシークできる位置はどこかを問いただす
+        return@withContext (0 until seekMap!!.durationMicros step 1_000) // マイクロ秒注意
             .map { timeUs -> seekMap!!.getSeekPoints(timeUs).component2() } // 次のシーク位置が欲しい
             .map { it.timeMicros }
             .distinct() // 同じ値（キーフレーム間隔が 1 秒以上なら同じ値が入ってくることある）
@@ -87,7 +88,6 @@ object MediaContainerAnalyzer {
         override fun getLength(): Long = fileSize
 
         override fun seekToPosition(p0: Long) {
-            println("seekToPosition")
             // ContentResolver#openInputStream だと mark/reset が使えない
             // InputStream を作り直す
             currentInputStream.close()

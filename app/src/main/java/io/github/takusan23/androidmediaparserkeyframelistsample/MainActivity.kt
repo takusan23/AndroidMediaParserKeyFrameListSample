@@ -48,17 +48,18 @@ fun MainScreen() {
     val scope = rememberCoroutineScope()
     val seekPositionList = remember { mutableStateOf(listOf<Long>()) }
 
-    fun analyze(uri: Uri?) {
+    fun start(uri: Uri?) {
         uri ?: return
         scope.launch {
-            // InputStream を開く
-            seekPositionList.value = MediaContainerAnalyzer.analyze(onCreateInputStream = { context.contentResolver.openInputStream(uri)!! })
+            // キーフレームの位置を出す
+            // 引数は InputStream を作る関数。必要になったら関数が呼ばれるので、InputStream を作って返してください。
+            seekPositionList.value = MediaParserKeyFrameDetector.detect(onCreateInputStream = { context.contentResolver.openInputStream(uri)!! })
         }
     }
 
     val filePicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia(),
-        onResult = { uri -> analyze(uri) }
+        onResult = { uri -> start(uri) }
     )
 
     Scaffold(
